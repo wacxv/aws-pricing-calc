@@ -1,0 +1,35 @@
+<h2 mat-dialog-title>Add to Collection</h2>
+<mat-dialog-content>
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  
+  <div *ngIf="error" class="error-message">
+    <p>{{ error }}</p>
+  </div>
+  
+  <div *ngIf="!loading && collections.length > 0">
+    <mat-form-field appearance="fill" style="width: 100%;">
+      <mat-label>Select a Collection</mat-label>
+      <mat-select [(ngModel)]="selectedCollectionId">
+        <mat-option *ngFor="let collection of collections" [value]="collection.collection_id">
+          {{ collection.collection_name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+  
+  <div *ngIf="!loading && collections.length === 0 && !error">
+    <p>No collections found. Create a new collection to continue.</p>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="createNewCollection()">
+    <mat-icon>add</mat-icon> New Collection
+  </button>
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button mat-button color="primary" (click)="onSubmit()" [disabled]="!selectedCollectionId || loading">
+    Add
+  </button>
+</mat-dialog-actions>

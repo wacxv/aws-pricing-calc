@@ -1,0 +1,1148 @@
+<div class="container">
+  <h1 class="text-center">AWS Pricing Calculator</h1>
+
+  <!-- New Initial Category Selection Form with updated options -->
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Choose a Service Category</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="category-selection-container">
+        <mat-form-field appearance="fill">
+          <mat-label>Service Category</mat-label>
+          <mat-select [(ngModel)]="initialCategory" [ngModelOptions]="{standalone: true}" (selectionChange)="onInitialCategoryChange()">
+            <!-- Removed the "All Services" option -->
+            <mat-option value="connect">Amazon Connect using AI</mat-option>
+            <mat-option value="features">Individual Features</mat-option>
+          </mat-select>
+        </mat-form-field>
+        
+        <!-- Featured Category dropdown - only display when Amazon Connect is selected -->
+        <mat-form-field appearance="fill" *ngIf="initialCategory === 'connect'" class="featured-category-select">
+          <mat-label>Featured Category</mat-label>
+          <mat-select [(ngModel)]="selectedFeaturedCategory" [ngModelOptions]="{standalone: true}" (selectionChange)="onFeaturedCategoryChange()">
+            <mat-option value="connect_services">Amazon Connect Services</mat-option>
+          </mat-select>
+        </mat-form-field>
+        
+        <!-- Subcategory selection for Individual Features -->
+        <mat-form-field appearance="fill" *ngIf="individualFeaturesMode" class="subcategory-select">
+          <mat-label>Feature Category</mat-label>
+          <mat-select [(ngModel)]="selectedSubCategory" [ngModelOptions]="{standalone: true}" (selectionChange)="onSubCategoryChange()">
+            <mat-option value="omnichannel">Omnichannel Experience</mat-option>
+            <mat-option value="productivity">Agent Productivity</mat-option>
+            <mat-option value="analytics">Analytics, Insights, and Optimization</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Services Layout - Flex Container for Service Selection Cards -->
+  <div class="service-cards-container">
+    <!-- Simplified Service Selection Card - Only show when Individual Features is selected -->
+    <mat-card class="service-card" *ngIf="individualFeaturesMode">
+      <mat-card-header>
+        <mat-card-title>Select Service</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="serviceForm">
+          <div class="form-container">
+            <div class="form-row horizontal-options">
+              <div class="form-field">
+                <mat-form-field appearance="fill">
+                  <mat-label>Service</mat-label>
+                  <mat-select formControlName="service">
+                    <mat-option *ngFor="let service of filteredServiceOptions" [value]="service.service_id">
+                      {{ service.service_name }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="serviceForm.get('service')?.hasError('required')">Service is required</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+            
+            <!-- Form Submit Button -->
+            <div class="form-actions-container">
+              <button mat-raised-button color="primary" (click)="onInitialServiceSelection()" [disabled]="!serviceForm.get('service')?.valid">
+                Next
+              </button>
+            </div>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Service Options Card - Fix condition and form fields -->
+    <mat-card class="service-card" *ngIf="showServiceOptions && isVoiceVideoService() && individualFeaturesMode">
+      <mat-card-header>
+        <mat-card-title>Service Options</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="serviceForm">
+          <div class="form-container">
+            <div class="form-row horizontal-options">
+              <div class="form-field">
+                <mat-form-field appearance="fill">
+                  <mat-label>Region</mat-label>
+                  <mat-select formControlName="region" (selectionChange)="onRegionChange($event.value)">
+                    <mat-option *ngFor="let region of filteredRegions" [value]="region.region_id">
+                      {{ region.region_name }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="serviceForm.get('region')?.hasError('required')">Region is required</mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="form-field">
+                <mat-form-field appearance="fill">
+                  <mat-label>Country</mat-label>
+                  <mat-select formControlName="country">
+                    <div class="search-wrapper">
+                      <ngx-mat-select-search 
+                        [formControl]="countryFilterCtrl"
+                        placeholderLabel="Search country"
+                        noEntriesFoundLabel="No matching countries">
+                      </ngx-mat-select-search>
+                    </div>
+                    <mat-option *ngFor="let country of filteredCountries" [value]="country.country_id">
+                      {{ country.country_name }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="serviceForm.get('country')?.hasError('required')">Country is required</mat-error>
+                </mat-form-field>
+              </div>
+              
+              <div class="form-field">
+                <mat-form-field appearance="fill">
+                  <mat-label>Call Type</mat-label>
+                  <mat-select formControlName="callType" (selectionChange)="onCallTypeChange($event.value)">
+                    <mat-option *ngFor="let callType of callTypes" [value]="callType.call_type_id">
+                      {{ callType.call_type_name }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="serviceForm.get('callType')?.hasError('required')">Call Type is required</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+            
+            <div class="form-actions-container">
+              <button mat-raised-button color="primary" (click)="onServiceFormSubmit()" [disabled]="!isVoiceVideoFormValid()">
+                Next
+              </button>
+            </div>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Step 2: Usage Details Form (shown after service selection) -->
+  <mat-card *ngIf="showUsageForm" class="usage-form-container">
+    <mat-card-header>
+      <mat-card-title>Usage Details</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <!-- Voice and Video Form -->
+      <form [formGroup]="usageForm" (ngSubmit)="onCalculate()" *ngIf="isVoiceVideoService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Business Days*</mat-label>
+                <input matInput type="number" formControlName="businessDays">
+                <mat-error *ngIf="usageForm.get('businessDays')?.hasError('required')">Business Days is required</mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>AHT (Avg Handle Time in Minutes)*</mat-label>
+                <input matInput type="number" formControlName="aht">
+                <mat-error *ngIf="usageForm.get('aht')?.hasError('required')">AHT is required</mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Daily Usage*</mat-label>
+                <input matInput type="number" formControlName="dailyUsage">
+                <mat-error *ngIf="usageForm.get('dailyUsage')?.hasError('required')">Daily Usage is required</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="usageForm.invalid">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- New Messaging and Chat Form -->
+      <form [formGroup]="messagingForm" (ngSubmit)="onCalculateMessaging()" *ngIf="isMessagingChatService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-checkbox formControlName="forBusiness" color="primary">For Business</mat-checkbox>
+            </div>
+          </div>
+          
+          <!-- Only show this entire section when "For Business" is checked -->
+          <div class="form-row usage-form-row" *ngIf="messagingForm.get('forBusiness')?.value">
+            <div class="form-field">
+              <div>
+                <!-- Remove the [disabled] attribute - we handle it in the controller -->
+                <mat-checkbox formControlName="whatsappMessaging" color="primary">
+                  WhatsApp Messaging
+                </mat-checkbox>
+              </div>
+              <!-- Only show input field when checkbox is checked -->
+              <mat-form-field appearance="fill" *ngIf="messagingForm.get('whatsappMessaging')?.value">
+                <mat-label>WhatsApp Usage*</mat-label>
+                <input matInput type="number" formControlName="whatsappUsage">
+                <mat-error *ngIf="messagingForm.get('whatsappUsage')?.hasError('required')">WhatsApp Usage is required</mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <div>
+                <!-- Remove the [disabled] attribute - we handle it in the controller -->
+                <mat-checkbox formControlName="appleMessages" color="primary">
+                  Apple Messages
+                </mat-checkbox>
+              </div>
+              <!-- Only show input field when checkbox is checked -->
+              <mat-form-field appearance="fill" *ngIf="messagingForm.get('appleMessages')?.value">
+                <mat-label>Apple Messages Usage*</mat-label>
+                <input matInput type="number" formControlName="appleMessagesUsage">
+                <mat-error *ngIf="messagingForm.get('appleMessagesUsage')?.hasError('required')">Apple Messages Usage is required</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Chat Usage*</mat-label>
+                <input matInput type="number" formControlName="chatUsage">
+                <mat-error *ngIf="messagingForm.get('chatUsage')?.hasError('required')">Chat Usage is required</mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>SMS Usage*</mat-label>
+                <input matInput type="number" formControlName="smsUsage">
+                <mat-error *ngIf="messagingForm.get('smsUsage')?.hasError('required')">SMS Usage is required</mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Chat Experiences*</mat-label>
+                <input matInput type="number" formControlName="chatExperiences">
+                <mat-error *ngIf="messagingForm.get('chatExperiences')?.hasError('required')">Chat Experiences is required</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="messagingForm.invalid">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- New Email Form -->
+      <form [formGroup]="emailForm" (ngSubmit)="onCalculateEmail()" *ngIf="isEmailService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Email Usage*</mat-label>
+                <input matInput type="number" formControlName="emailUsage">
+                <mat-error *ngIf="emailForm.get('emailUsage')?.hasError('required')">Email Usage is required</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="emailForm.invalid">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Simplified Amazon Q Form -->
+      <form [formGroup]="amazonQForm" (ngSubmit)="onCalculateAmazonQ()" *ngIf="isAmazonQService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row radio-group">
+            <mat-radio-group formControlName="channelType" aria-label="Select channel type">
+              <mat-radio-button value="chat" class="margin-right">Chat</mat-radio-button>
+              <mat-radio-button value="voice">Voice</mat-radio-button>
+            </mat-radio-group>
+          </div>
+          
+          <!-- Single row with just the usage input based on selected channel -->
+          <div class="form-row usage-form-row">
+            <!-- Chat usage field -->
+            <div class="form-field" *ngIf="amazonQForm.get('channelType')?.value === 'chat'">
+              <mat-form-field appearance="fill">
+                <mat-label>Chat Usage*</mat-label>
+                <input matInput type="number" formControlName="chatMessages">
+                <mat-error *ngIf="amazonQForm.get('chatMessages')?.hasError('required')">Required field</mat-error>
+              </mat-form-field>
+            </div>
+            
+            <!-- Voice usage field -->
+            <div class="form-field" *ngIf="amazonQForm.get('channelType')?.value === 'voice'">
+              <mat-form-field appearance="fill">
+                <mat-label>Voice Usage*</mat-label>
+                <input matInput type="number" formControlName="callDuration">
+                <mat-error *ngIf="amazonQForm.get('callDuration')?.hasError('required')">Required field</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="!isAmazonQFormValid()">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Task Form -->
+      <form [formGroup]="taskForm" (ngSubmit)="onCalculateTask()" *ngIf="isTaskService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Task Usage*</mat-label>
+                <input matInput type="number" formControlName="taskUsage">
+                <mat-error *ngIf="taskForm.get('taskUsage')?.hasError('required')">Task Usage is required</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="taskForm.invalid">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Case Form - Only display for Case service -->
+      <form [formGroup]="caseForm" (ngSubmit)="onCalculateCase()" *ngIf="isCaseService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Case Usage*</mat-label>
+                <input matInput type="number" formControlName="caseUsage">
+                <mat-error *ngIf="caseForm.get('caseUsage')?.hasError('required')">Case Usage is required</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="caseForm.invalid">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Customer Profile Form - Only display for Customer Profile service -->
+      <form [formGroup]="customerProfileForm" (ngSubmit)="onCalculateCustomerProfile()" *ngIf="isCustomerProfileService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Daily Amazon Q Requests*</mat-label>
+                <input matInput type="number" formControlName="cp_daily_azq">
+                <mat-error *ngIf="customerProfileForm.get('cp_daily_azq')?.hasError('required')">This field is required</mat-error>
+                <mat-error *ngIf="customerProfileForm.get('cp_daily_azq')?.hasError('min')">Value must be 0 or greater</mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Daily External Requests*</mat-label>
+                <input matInput type="number" formControlName="cp_daily_ext">
+                <mat-error *ngIf="customerProfileForm.get('cp_daily_ext')?.hasError('required')">This field is required</mat-error>
+                <mat-error *ngIf="customerProfileForm.get('cp_daily_ext')?.hasError('min')">Value must be 0 or greater</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="customerProfileForm.invalid">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Voice ID Form -->
+      <form [formGroup]="voiceIdForm" (ngSubmit)="onCalculateVoiceId()" *ngIf="isVoiceIdService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Voice ID Usage*</mat-label>
+                <input matInput type="number" formControlName="voiceidUsage">
+                <mat-error *ngIf="voiceIdForm.get('voiceidUsage')?.hasError('required')">Voice ID Usage is required</mat-error>
+                <mat-error *ngIf="voiceIdForm.get('voiceidUsage')?.hasError('min')">Value must be 0 or greater</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="voiceIdForm.invalid">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Guides Form - Only display for Guides service -->
+      <form [formGroup]="guidesForm" (ngSubmit)="onCalculateGuides()" *ngIf="isGuidesService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Messages Sent*</mat-label>
+                <input matInput type="number" formControlName="msg_sent">
+                <mat-error *ngIf="guidesForm.get('msg_sent')?.hasError('required')">Messages Sent is required</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="guidesForm.invalid">Calculate</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Add Agent Assist Form -->
+      <form [formGroup]="agentAssistForm" (ngSubmit)="onCalculateAgentAssist()" *ngIf="isAgentAssistService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Agent Usage*</mat-label>
+                <input matInput type="number" formControlName="agentUsage">
+                <mat-error *ngIf="agentAssistForm.get('agentUsage')?.hasError('required')">
+                  Agent Usage is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="agentAssistForm.invalid">
+              Calculate
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Connect Services Form -->
+      <form [formGroup]="connectServicesForm" (ngSubmit)="onCalculateConnectServices()" *ngIf="isConnectServicesService()">
+        <div class="form-container">
+          <!-- First row with 5 inputs -->
+          <div class="form-row usage-form-row compact-inputs">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Invoice</mat-label>
+                <input matInput type="number" formControlName="invoice_acs" placeholder="0">
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Outbound</mat-label>
+                <input matInput type="number" formControlName="outbound_acs" placeholder="0">
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Chat</mat-label>
+                <input matInput type="number" formControlName="chat_usage_acs">
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Email</mat-label>
+                <input matInput type="number" formControlName="email_acs">
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Tasks</mat-label>
+                <input matInput type="number" formControlName="task_acs">
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <!-- Second row with 5 inputs -->
+          <div class="form-row usage-form-row compact-inputs">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>SMS</mat-label>
+                <input matInput type="number" formControlName="sms_acs">
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Apple Msgs</mat-label>
+                <input matInput type="number" formControlName="apple_acs">
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>WhatsApp</mat-label>
+                <input matInput type="number" formControlName="whatsapp_acs">
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Guide</mat-label>
+                <input matInput type="number" formControlName="guide_acs">
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Outb. Campaign</mat-label>
+                <input matInput type="number" formControlName="outcamp_acs">
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="connectServicesForm.invalid">
+              Calculate
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Connect Lens Form - Fixed version with bracket notation -->
+      <form [formGroup]="connectLensForm" (ngSubmit)="onCalculateConnectLens()" *ngIf="isConnectLensService()">
+        <div class="form-container">
+          <!-- First row with 3 inputs -->
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Voice Calls*</mat-label>
+                <input matInput type="number" formControlName="cl_voice_calls">
+                <mat-error *ngIf="connectLensForm.get('cl_voice_calls')?.hasError('required')">
+                  Voice Calls is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Chat Messages*</mat-label>
+                <input matInput type="number" formControlName="cl_chat_message">
+                <mat-error *ngIf="connectLensForm.get('cl_chat_message')?.hasError('required')">
+                  Chat Messages is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Performance Eval*</mat-label>
+                <input matInput type="number" formControlName="cl_performance_eval">
+                <mat-error *ngIf="connectLensForm.get('cl_performance_eval')?.hasError('required')">
+                  Performance Eval is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <!-- Second row with 3 inputs -->
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Screen Recording*</mat-label>
+                <input matInput type="number" formControlName="cl_screen_rec">
+                <mat-error *ngIf="connectLensForm.get('cl_screen_rec')?.hasError('required')">
+                  Screen Recording is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>External Voice*</mat-label>
+                <input matInput type="number" formControlName="cl_external_voice">
+                <mat-error *ngIf="connectLensForm.get('cl_external_voice')?.hasError('required')">
+                  External Voice is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>External Connector*</mat-label>
+                <input matInput type="number" formControlName="cl_external_connector">
+                <mat-error *ngIf="connectLensForm.get('cl_external_connector')?.hasError('required')">
+                  External Connector is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="connectLensForm.invalid">
+              Calculate
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Forecasting and Scheduling Form -->
+      <form [formGroup]="forecastingSchedulingForm" (ngSubmit)="onCalculateForecastingScheduling()" *ngIf="isForecastingSchedulingService()">
+        <div class="form-container">
+          <div class="form-row usage-form-row">
+            <div class="form-field">
+              <mat-form-field appearance="fill">
+                <mat-label>Forecasted Agents*</mat-label>
+                <input matInput type="number" formControlName="agent_forecasted">
+                <mat-error *ngIf="forecastingSchedulingForm.get('agent_forecasted')?.hasError('required')">
+                  Forecasted Agents is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="forecastingSchedulingForm.invalid">
+              Calculate
+            </button>
+          </div>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Combined Summary Section - Fix visibility conditions -->
+  <mat-card *ngIf="calculationResults && calculationResults.length > 0" class="mb-4">
+    <mat-card-header>
+      <mat-card-title>Summary</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <!-- Display a message if debugging is needed -->
+      <div *ngIf="calculationResults.length === 0" class="text-center">
+        <p>No calculation results available</p>
+      </div>
+      
+      <!-- Cost summaries items -->
+      <div *ngFor="let summary of costSummaries; let i = index" class="cost-summary-item">
+        <div class="cost-summary-text">
+          <a (click)="scrollToResult(i)" class="summary-link">
+            {{summary.label}}
+          </a>
+          <!-- Display calculation ID badge with improved visibility -->
+          <span *ngIf="summary.id" class="calculation-id-badge">ID: {{summary.id}}</span>
+          <!-- Fallback for debugging - remove in production -->
+          <span *ngIf="!summary.id && calculationResults[i]?.id" class="calculation-id-badge text-warning">
+            ID: {{calculationResults[i].id}}
+          </span>
+          <span *ngIf="!summary.id && !calculationResults[i]?.id" class="calculation-id-badge text-danger">
+            No ID
+          </span>
+        </div>
+        
+        <!-- Add debug button for development only - with improved tooltip -->
+        <button mat-icon-button *ngIf="calculationResults[i] && !calculationResults[i].id" 
+                (click)="debugSaveCalculation(calculationResults[i])" 
+                title="Sync to get calculation ID"
+                class="debug-button">
+          <mat-icon>sync</mat-icon>
+        </button>
+        
+        <!-- If we have an ID already, show it with different styling -->
+        <button mat-icon-button *ngIf="calculationResults[i]?.id" 
+                title="Calculation ID: {{calculationResults[i].id}}"
+                class="id-button" disabled>
+          <mat-icon>check_circle</mat-icon>
+        </button>
+        
+        <div class="cost-summary-amount">{{summary.amount | currency}}</div>
+        <button mat-icon-button (click)="saveToCollection(i)" title="Save to collection">
+          <mat-icon>bookmark</mat-icon>
+        </button>
+        <button mat-icon-button (click)="removeCostSummary(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+      
+      <!-- Add total row to the summary -->
+      <div class="cost-summary-item total-row">
+        <div class="cost-summary-text">Total</div>
+        <div class="cost-summary-amount">{{formatCurrency(getTotalCost())}}</div>
+        <div class="spacer"></div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Results Table - Fix visibility conditions -->
+  <mat-card *ngIf="calculationResults && calculationResults.length > 0" class="mb-4">
+    <mat-card-header>
+      <mat-card-title>Results</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngFor="let result of calculationResults; let i = index" class="mb-4">
+        <div [id]="'result-' + i" class="result-section">
+          <!-- Voice/Video Table Format -->
+          <table class="table table-bordered" *ngIf="!isMessagingChatResult(i) && !isEmailResult(i) && !isAmazonQResult(i) && !isTaskResult(i) && !isCaseResult(i) && !isCustomerProfileResult(i) && !isGuidesResult(i) && !isVoiceIdResult(i) && !isAgentAssistResult(i) && !isConnectServicesResult(i) && !isConnectLensResult(i) && !isForecastingSchedulingResult(i)">
+            <thead>
+              <tr>
+                <th>Cost Type</th>
+                <th>Country Code</th>
+                <th>Daily</th>
+                <th>Business Days</th>
+                <th>Monthly calls</th>
+                <th>AHT(mins)</th>
+                <th>Call mins</th>
+                <th class="text-right">Costs (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="isOutboundCallType(i)">
+                <td>Outbound Call Cost</td>
+                <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                <td>{{result['daily_usage']}}</td>
+                <td>{{result['business_days']}}</td>
+                <td>{{result['monthly_calls']}}</td>
+                <td>{{result['aht']}}</td>
+                <td>{{result['call_minutes']}}</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+              <ng-container *ngIf="isInboundCallType(i)">
+                <tr>
+                  <td>Cost DID</td>
+                  <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                  <td>{{result['daily_usage']}}</td>
+                  <td>{{result['business_days']}}</td>
+                  <td>{{result['monthly_calls']}}</td>
+                  <td>{{result['aht']}}</td>
+                  <td>{{result['call_minutes']}}</td>
+                  <td class="text-right">{{result['cost_did'] ?? 0 | currency}}</td>
+                </tr>
+                <tr>
+                  <td>Cost Toll-Free</td>
+                  <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                  <td>{{result['daily_usage']}}</td>
+                  <td>{{result['business_days']}}</td>
+                  <td>{{result['monthly_calls']}}</td>
+                  <td>{{result['aht']}}</td>
+                  <td>{{result['call_minutes']}}</td>
+                  <td class="text-right">{{result['cost_toll_free'] ?? 0 | currency}}</td>
+                </tr>
+                <tr>
+                  <td>Voice Usage Cost</td>
+                  <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                  <td>{{result['daily_usage']}}</td>
+                  <td>{{result['business_days']}}</td>
+                  <td>{{result['monthly_calls']}}</td>
+                  <td>{{result['aht']}}</td>
+                  <td>{{result['call_minutes']}}</td>
+                  <td class="text-right">{{result['cost_voice_usage'] ?? 0 | currency}}</td>
+                </tr>
+                <tr>
+                  <td>In-App/Web Audio Cost</td>
+                  <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                  <td>{{result['daily_usage']}}</td>
+                  <td>{{result['business_days']}}</td>
+                  <td>{{result['monthly_calls']}}</td>
+                  <td>{{result['aht']}}</td>
+                  <td>{{result['call_minutes']}}</td>
+                  <td class="text-right">{{result['cost_in_app_web_audio'] ?? 0 | currency}}</td>
+                </tr>
+                <tr>
+                  <td>Screen Sharing Cost</td>
+                  <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                  <td>{{result['daily_usage']}}</td>
+                  <td>{{result['business_days']}}</td>
+                  <td>{{result['monthly_calls']}}</td>
+                  <td>{{result['aht']}}</td>
+                  <td>{{result['call_minutes']}}</td>
+                  <td class="text-right">{{result['cost_screen_sharing'] ?? 0 | currency}}</td>
+                </tr>
+                <tr>
+                  <td>Video Connection Cost</td>
+                  <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                  <td>{{result['daily_usage']}}</td>
+                  <td>{{result['business_days']}}</td>
+                  <td>{{result['monthly_calls']}}</td>
+                  <td>{{result['aht']}}</td>
+                  <td>{{result['call_minutes']}}</td>
+                  <td class="text-right">{{result['cost_video_connection'] ?? 0 | currency}}</td>
+                </tr>
+              </ng-container>
+              <tr class="font-weight-bold">
+                <td colspan="7">Total Costs</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Messaging and Chat Table Format -->
+          <table class="table table-bordered" *ngIf="isMessagingChatResult(i)">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th class="text-center">Usage</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Chat Usage</td>
+                <td class="text-center">{{ result['chatUsage'] || 0 | number }} messages</td>
+                <td class="text-right">{{ (result['cost_chat_usage'] || 0) | currency }}</td>
+              </tr>
+              <tr>
+                <td>SMS Usage</td>
+                <td class="text-center">{{ result['smsUsage'] || 0 | number }} messages</td>
+                <td class="text-right">{{ (result['cost_sms_usage'] || 0) | currency }}</td>
+              </tr>
+              <tr *ngIf="result['appleMessages']">
+                <td>Apple Messages</td>
+                <td class="text-center">{{ result['appleMessagesUsage'] || 0 | number }} messages</td>
+                <td class="text-right">{{ (result['cost_apple_messages'] || 0) | currency }}</td>
+              </tr>
+              <tr *ngIf="result['whatsappMessaging']">
+                <td>WhatsApp Messaging</td>
+                <td class="text-center">{{ result['whatsappUsage'] || 0 | number }} messages</td>
+                <td class="text-right">{{ (result['cost_whatsapp_messaging'] || 0) | currency }}</td>
+              </tr>
+              <tr>
+                <td>Chat Experiences</td>
+                <td class="text-center">{{ result['chatExperiences'] || 0 | number }} experiences</td>
+                <td class="text-right">{{ (result['cost_chat_experiences'] || 0) | currency }}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td colspan="2">Total</td>
+                <td class="text-right">{{ result.total_cost | currency }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Email Table Format -->
+          <table class="table table-bordered" *ngIf="isEmailResult(i)">
+            <thead>
+              <tr>
+                <th>Email Service</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Email Usage</td>
+                <td class="text-right">{{result.cost_email_usage | currency}}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td>Total</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Amazon Q Table Format -->
+          <table class="table table-bordered" *ngIf="isAmazonQResult(i)">
+            <thead>
+              <tr>
+                <th>Amazon Q Agent</th>
+                <th>Usage</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="result['channelType'] === 'chat' || (result['cost_azq_chat_usage'] ?? 0) > 0">
+                <td>Chat Usage</td>
+                <td>{{ result['chatMessages'] || 0 | number }} messages</td>
+                <td class="text-right">{{ (result['cost_azq_chat_usage'] || 0) | currency:'USD':'symbol':'1.2-2' }}</td>
+              </tr>
+              <tr *ngIf="result['channelType'] === 'voice' || (result['cost_azq_voice_usage'] ?? 0) > 0">
+                <td>Voice Usage</td>
+                <td>{{ result['callDuration'] || 0 | number }} minutes</td>
+                <td class="text-right">{{ (result['cost_azq_voice_usage'] || 0) | currency:'USD':'symbol':'1.2-2' }}</td>
+              </tr>
+              <tr class="table-total">
+                <td colspan="2" class="text-left"><strong>Total</strong></td>
+                <td class="text-right"><strong>{{ result.total_cost | currency:'USD':'symbol':'1.2-2' }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Task Table Format -->
+          <table class="table table-bordered" *ngIf="isTaskResult(i)">
+            <thead>
+              <tr>
+                <th>Task Service</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Task Usage</td>
+                <td class="text-right">{{result.cost_task_usage | currency}}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td>Total</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Case Table Format -->
+          <table class="table table-bordered" *ngIf="isCaseResult(i)">
+            <thead>
+              <tr>
+                <th>Case Service</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Case Usage</td>
+                <td class="text-right">{{result.cost_case_usage | currency}}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td>Total</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Customer Profile Table Format - Add this table for displaying Customer Profile results -->
+          <table class="table table-bordered" *ngIf="isCustomerProfileResult(i)">
+            <thead>
+              <tr>
+                <th>Customer Profile Service</th>
+                <th class="text-center">Usage</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Daily Amazon Q Requests</td>
+                <td class="text-center">{{ result.cp_daily_azq | number }}</td>
+                <td class="text-right">{{ result.cost_cp_daily_azq | currency }}</td>
+              </tr>
+              <tr>
+                <td>Daily External Requests</td>
+                <td class="text-center">{{ result.cp_daily_ext | number }}</td>
+                <td class="text-right">{{ result.cost_cp_daily_ext | currency }}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td colspan="2">Total</td>
+                <td class="text-right">{{ result.total_cost | currency }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Guides Table Format -->
+          <table class="table table-bordered" *ngIf="isGuidesResult(i)">
+            <thead>
+              <tr>
+                <th>Guides Service</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Messages Sent</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td>Total</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Voice ID Table Format -->
+          <table class="table table-bordered" *ngIf="isVoiceIdResult(i)">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Voice ID Authentications</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ result.serviceName || 'Voice ID' }}</td>
+                <td>{{ result.voiceid_usage | number }}</td>
+                <td class="text-right">{{ result.cost_voiceid_usage | currency:'USD':'symbol':'1.2-2' }}</td>
+              </tr>
+              <tr class="table-total">
+                <td colspan="2" class="text-left"><strong>Total</strong></td>
+                <td class="text-right"><strong>{{ result.total_cost | currency:'USD':'symbol':'1.2-2' }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Agent Assist Table Format -->
+          <table class="table table-bordered" *ngIf="isAgentAssistResult(i)">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Agent Assist Usage</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ result.serviceName || 'Agent Assist' }}</td>
+                <td>{{ result['agent_usage'] | number }}</td>
+                <td class="text-right">{{ result['cost_agent_usage'] | currency:'USD':'symbol':'1.2-2' }}</td>
+              </tr>
+              <tr class="table-total">
+                <td colspan="2" class="text-right"><strong>Total</strong></td>
+                <td class="text-right"><strong>{{ result.total_cost | currency:'USD':'symbol':'1.2-2' }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Connect Services Table Format -->
+          <table class="table table-bordered" *ngIf="isConnectServicesResult(i)">
+            <thead>
+              <tr>
+                <th>Connect Services</th>
+                <th class="text-right">Usage</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Invoice</td>
+                <td class="text-right">{{result.invoice_acs || 0}}</td>
+                <td class="text-right">{{result.cost_invoice_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>Outbound</td>
+                <td class="text-right">{{result.outbound_acs || 0}}</td>
+                <td class="text-right">{{result.cost_outbound_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>Chat</td>
+                <td class="text-right">{{result.chat_usage_acs || 0}}</td>
+                <td class="text-right">{{result.cost_chat_usage_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>Email</td>
+                <td class="text-right">{{result.email_acs || 0}}</td>
+                <td class="text-right">{{result.cost_email_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>Tasks</td>
+                <td class="text-right">{{result.task_acs || 0}}</td>
+                <td class="text-right">{{result.cost_task_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>SMS</td>
+                <td class="text-right">{{result.sms_acs || 0}}</td>
+                <td class="text-right">{{result.cost_sms_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>Apple Messages</td>
+                <td class="text-right">{{result.apple_acs || 0}}</td>
+                <td class="text-right">{{result.cost_apple_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>WhatsApp</td>
+                <td class="text-right">{{result.whatsapp_acs || 0}}</td>
+                <td class="text-right">{{result.cost_whatsapp_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>Guide</td>
+                <td class="text-right">{{result.guide_acs || 0}}</td>
+                <td class="text-right">{{result.cost_guide_acs | currency}}</td>
+              </tr>
+              <tr>
+                <td>Outbound Campaign</td>
+                <td class="text-right">{{result.outcamp_acs || 0}}</td>
+                <td class="text-right">{{result.cost_outcamp_acs | currency}}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td colspan="2">Total</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Connect Lens Table Format -->
+          <table class="table table-bordered" *ngIf="isConnectLensResult(i)">
+            <thead>
+              <tr>
+                <th>Connect Lens</th>
+                <th class="text-center">Usage</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Voice Calls</td>
+                <td class="text-center">{{result['cl_voice_calls'] || 0}}</td>
+                <td class="text-right">{{(result['cost_cl_voice_calls'] || 0) | currency}}</td>
+              </tr>
+              <tr>
+                <td>Chat Messages</td>
+                <td class="text-center">{{result['cl_chat_message'] || 0}}</td>
+                <td class="text-right">{{(result['cost_cl_chat_message'] || 0) | currency}}</td>
+              </tr>
+              <tr>
+                <td>Performance Evaluations</td>
+                <td class="text-center">{{result['cl_performance_eval'] || 0}}</td>
+                <td class="text-right">{{(result['cost_cl_performance_eval'] || 0) | currency}}</td>
+              </tr>
+              <tr>
+                <td>Screen Recording</td>
+                <td class="text-center">{{result['cl_screen_rec'] || 0}}</td>
+                <td class="text-right">{{(result['cost_cl_screen_rec'] || 0) | currency}}</td>
+              </tr>
+              <tr>
+                <td>External Voice</td>
+                <td class="text-center">{{result['cl_external_voice'] || 0}}</td>
+                <td class="text-right">{{(result['cost_cl_external_voice'] || 0) | currency}}</td>
+              </tr>
+              <tr>
+                <td>External Connector</td>
+                <td class="text-center">{{result['cl_external_connector'] || 0}}</td>
+                <td class="text-right">{{(result['cost_cl_external_connector'] || 0) | currency}}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td colspan="2">Total</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Forecasting and Scheduling Table Format -->
+          <table class="table table-bordered" *ngIf="isForecastingSchedulingResult(i)">
+            <thead>
+              <tr>
+                <th>Forecasting and Scheduling</th>
+                <th class="text-center">Usage</th>
+                <th class="text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Forecasted Agents</td>
+                <td class="text-center">{{result['agent_forecasted'] || 0}} agents</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+              <tr class="font-weight-bold">
+                <td colspan="2">Total</td>
+                <td class="text-right">{{result.total_cost | currency}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<button 
+    mat-fab 
+    class="scroll-to-top" 
+    [ngClass]="{'show-scroll': showScroll}" 
+    (click)="scrollToTop()"
+    aria-label="Scroll to top">
+    <mat-icon>keyboard_arrow_up</mat-icon>
+</button>

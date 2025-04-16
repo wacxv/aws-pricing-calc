@@ -1,0 +1,471 @@
+/* Base styles */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+}
+
+h1 {
+  margin: 20px 0;
+  color: var(--text-color);
+  text-align: center;
+  font-size: 2rem;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+mat-card {
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+mat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+mat-card-header {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  padding: 16px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-bottom: 2px solid var(--accent-color);
+}
+
+mat-card-title {
+  color: var(--text-color);
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+/* Collection Layout Styles */
+.collection-container {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.collections-card {
+  height: calc(100vh - 140px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-color) var(--secondary-color);
+}
+
+.collections-card::-webkit-scrollbar {
+  width: 8px;
+}
+
+.collections-card::-webkit-scrollbar-track {
+  background: var(--secondary-color);
+}
+
+.collections-card::-webkit-scrollbar-thumb {
+  background-color: var(--accent-color);
+  border-radius: 4px;
+}
+
+/* Collection item styling */
+.collection-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  width: 100%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.2s ease;
+}
+
+.collection-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.collection-icon {
+  color: var(--button-color);
+}
+
+.collection-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.collection-name {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.collection-date {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+/* Collection item content layout */
+.collection-item-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.collection-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* Make buttons smaller to fit better */
+.collection-actions button {
+  margin-left: 4px;
+  width: 32px;
+  height: 32px;
+  line-height: 20px;
+}
+
+.collection-actions mat-icon {
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
+  line-height: 18px;
+}
+
+/* Active Collection */
+.active {
+  background-color: rgba(74, 144, 226, 0.2) !important;
+  border-left: 3px solid var(--button-color);
+}
+
+/* Collection Title Container */
+.collection-title-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.collection-total {
+  font-size: 1.1rem;
+  color: var(--button-color);
+  background: rgba(74, 144, 226, 0.1);
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-left: 16px;
+  font-weight: 600;
+}
+
+/* Calculations List Styles */
+.calculations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Enhanced calculation item styling */
+.calculation-item {
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--secondary-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 16px;
+  border-left: 4px solid var(--accent-color);
+}
+
+.calculation-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.calculation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
+
+.calculation-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.calculation-id {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 6px;
+}
+
+.service-name {
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--text-color);
+}
+
+.calculation-cost {
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--button-color);
+  padding: 6px 12px;
+  background: rgba(74, 144, 226, 0.1);
+  border-radius: 4px;
+}
+
+.calculation-details {
+  font-size: 14px;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 14px;
+  border-radius: 6px;
+  margin: 10px 0 14px 0;
+}
+
+.detail-row {
+  display: flex;
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.detail-label {
+  width: 160px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.calculation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.calculation-actions button {
+  min-width: 100px;
+}
+
+/* Create collection button container */
+.create-collection-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+.create-collection-container button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  font-weight: 500;
+  background-color: var(--button-color);
+  color: var(--text-color);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  border-radius: 24px;
+}
+
+.create-collection-container button:hover {
+  transform: translateY(-2px);
+  background-color: var(--button-hover-color);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px;
+  gap: 20px;
+  text-align: center;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.empty-state mat-icon {
+  font-size: 64px;
+  height: 64px;
+  width: 64px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.empty-state h3 {
+  font-size: 24px;
+  margin: 0;
+  color: var(--text-color);
+}
+
+.empty-state p {
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.loading-spinner {
+  color: var(--button-color);
+}
+
+/* Error message */
+.error-message {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-left: 4px solid #f44336;
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.error-message p {
+  display: flex;
+  align-items: center;
+  color: #ff7373;
+  margin: 0;
+}
+
+.error-message mat-icon {
+  margin-right: 10px;
+  color: #f44336;
+}
+
+/* Animation for newly added item */
+@keyframes highlightNew {
+  0% { background-color: rgba(76, 175, 80, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.new-item {
+  animation: highlightNew 2s ease-out;
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+  .collection-container {
+    grid-template-columns: 1fr;
+  }
+
+  .collections-card {
+    height: auto;
+    max-height: 400px;
+  }
+  
+  .calculation-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .calculation-cost {
+    align-self: flex-start;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .detail-label {
+    width: 100%;
+  }
+
+  .collection-title-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .collection-total {
+    margin-left: 0;
+  }
+}
+
+/* Table styles */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.table-bordered th,
+.table-bordered td {
+  border: 1px solid var(--accent-color);
+  padding: 10px;
+}
+
+.table-bordered th {
+  background-color: var(--primary-color);
+}
+
+/* Scroll to top button */
+.scroll-to-top {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  border-radius: 50%;
+  background-color: var(--button-color);
+  color: var(--text-color);
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.scroll-to-top.show-scroll {
+  opacity: 1;
+  visibility: visible;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.scroll-to-top:hover {
+  animation-play-state: paused;
+  background-color: var(--button-hover-color);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Search form styling */
+.search-form {
+  margin-bottom: 24px;
+  background-color: var(--secondary-color);
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.search-form mat-form-field {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+::ng-deep .search-form .mat-form-field-appearance-fill .mat-form-field-flex {
+  background-color: var(--input-bg-color);
+}
+
+::ng-deep .search-form .mat-form-field-label {
+  color: var(--text-color) !important;
+}
+
+::ng-deep .search-form .mat-input-element {
+  color: var(--text-color);
+}

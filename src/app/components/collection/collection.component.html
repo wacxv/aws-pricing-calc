@@ -1,0 +1,565 @@
+<div class="container">
+  <h1 class="text-center">Collections</h1>
+
+  <!-- Collections Layout -->
+  <div class="collection-container">
+    <!-- Collections List -->
+    <mat-card class="collections-card">
+      <mat-card-header>
+        <mat-card-title>Your Collections</mat-card-title>
+        <div class="spacer"></div>
+        <button mat-icon-button color="primary" (click)="createNewCollection()" title="Create new collection">
+          <mat-icon>add</mat-icon>
+        </button>
+      </mat-card-header>
+      <mat-card-content>
+        <div *ngIf="collections.length === 0 && !loading" class="empty-state">
+          <p>No collections found</p>
+          <button mat-raised-button color="primary" (click)="createNewCollection()">
+            Create Your First Collection
+          </button>
+        </div>
+
+        <mat-nav-list *ngIf="collections.length > 0">
+          <a *ngFor="let collection of collections" class="collection-item" 
+             [class.active]="selectedCollection?.collection_id === collection.collection_id || 
+                             selectedCollection?.id === collection.id"
+             (click)="selectCollection(collection)">
+            <div class="collection-item-content">
+              <span class="collection-name">{{collection.collection_name || collection.name}}</span>
+              <div class="collection-actions">
+                <button mat-icon-button color="primary" 
+                        (click)="renameCollection(collection, $event)" 
+                        title="Rename collection">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" 
+                        (click)="deleteCollection(collection, $event)" 
+                        title="Delete collection">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          </a>
+        </mat-nav-list>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Selected Collection Content -->
+    <div class="collection-content" *ngIf="selectedCollection">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>
+            <div class="collection-title-container">
+              <div>
+                <mat-icon>folder_open</mat-icon>
+                {{selectedCollection.collection_name || selectedCollection.name}}
+              </div>
+              <div *ngIf="calculationResults.length > 0" class="collection-total">
+                Total: {{calculateTotalCost() | currency:'USD':'symbol':'1.2-2'}}
+              </div>
+            </div>
+          </mat-card-title>
+          <mat-card-subtitle *ngIf="calculationResults.length > 0">
+            {{calculationResults.length}} calculation(s)
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-state">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading calculations...</p>
+        </div>
+
+        <!-- Empty State -->
+        <mat-card-content *ngIf="!loading && calculationResults.length === 0" class="empty-state">
+          <mat-icon>calculate</mat-icon>
+          <p>No calculations in this collection</p>
+          <a mat-raised-button color="primary" routerLink="/home">
+            Create New Calculation
+          </a>
+        </mat-card-content>
+
+        <!-- Calculations List -->
+        <mat-card-content *ngIf="!loading && calculationResults.length > 0">
+          <div class="calculations-list">
+            <div *ngFor="let result of calculationResults; let i = index" class="calculation-item" [id]="'result-' + i">
+              <div class="calculation-header">
+                <div class="calculation-title">
+                  <span class="calculation-id">Calculation #{{result.id}}</span>
+                  <span class="service-name">{{getServiceName(result)}}</span>
+                </div>
+                <span class="calculation-cost">{{result.total_cost | currency:'USD':'symbol':'1.2-2'}}</span>
+              </div>
+              
+              <!-- Display calculation details based on type -->
+              <mat-card *ngIf="calculationResults && calculationResults.length > 0" class="mb-4">
+                <mat-card-content>
+                  <div *ngFor="let result of calculationResults; let i = index" class="mb-4">
+                    <div [id]="'result-' + i" class="result-section">
+                    <!-- Voice/Video Table Format -->
+                    <table class="table table-bordered" *ngIf="!isMessagingChatResult(i) && !isEmailResult(i) && !isAmazonQResult(i) && !isTaskResult(i) && !isCaseResult(i) && !isCustomerProfileResult(i) && !isGuidesResult(i) && !isVoiceIdResult(i) && !isAgentAssistResult(i) && !isConnectServicesResult(i) && !isConnectLensResult(i) && !isForecastingSchedulingResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Cost Type</th>
+                          <th>Country Code</th>
+                          <th>Daily</th>
+                          <th>Business Days</th>
+                          <th>Monthly calls</th>
+                          <th>AHT(mins)</th>
+                          <th>Call mins</th>
+                          <th class="text-right">Costs (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngIf="isOutboundCallType(i)">
+                          <td>Outbound Call Cost</td>
+                          <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                          <td>{{result['daily_usage']}}</td>
+                          <td>{{result['business_days']}}</td>
+                          <td>{{result['monthly_calls']}}</td>
+                          <td>{{result['aht']}}</td>
+                          <td>{{result['call_minutes']}}</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                        <ng-container *ngIf="isInboundCallType(i)">
+                          <tr>
+                            <td>Cost DID</td>
+                            <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                            <td>{{result['daily_usage']}}</td>
+                            <td>{{result['business_days']}}</td>
+                            <td>{{result['monthly_calls']}}</td>
+                            <td>{{result['aht']}}</td>
+                            <td>{{result['call_minutes']}}</td>
+                            <td class="text-right">{{result['cost_did'] ?? 0 | currency}}</td>
+                          </tr>
+                          <tr>
+                            <td>Cost Toll-Free</td>
+                            <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                            <td>{{result['daily_usage']}}</td>
+                            <td>{{result['business_days']}}</td>
+                            <td>{{result['monthly_calls']}}</td>
+                            <td>{{result['aht']}}</td>
+                            <td>{{result['call_minutes']}}</td>
+                            <td class="text-right">{{result['cost_toll_free'] ?? 0 | currency}}</td>
+                          </tr>
+                          <tr>
+                            <td>Voice Usage Cost</td>
+                            <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                            <td>{{result['daily_usage']}}</td>
+                            <td>{{result['business_days']}}</td>
+                            <td>{{result['monthly_calls']}}</td>
+                            <td>{{result['aht']}}</td>
+                            <td>{{result['call_minutes']}}</td>
+                            <td class="text-right">{{result['cost_voice_usage'] ?? 0 | currency}}</td>
+                          </tr>
+                          <tr>
+                            <td>In-App/Web Audio Cost</td>
+                            <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                            <td>{{result['daily_usage']}}</td>
+                            <td>{{result['business_days']}}</td>
+                            <td>{{result['monthly_calls']}}</td>
+                            <td>{{result['aht']}}</td>
+                            <td>{{result['call_minutes']}}</td>
+                            <td class="text-right">{{result['cost_in_app_web_audio'] ?? 0 | currency}}</td>
+                          </tr>
+                          <tr>
+                            <td>Screen Sharing Cost</td>
+                            <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                            <td>{{result['daily_usage']}}</td>
+                            <td>{{result['business_days']}}</td>
+                            <td>{{result['monthly_calls']}}</td>
+                            <td>{{result['aht']}}</td>
+                            <td>{{result['call_minutes']}}</td>
+                            <td class="text-right">{{result['cost_screen_sharing'] ?? 0 | currency}}</td>
+                          </tr>
+                          <tr>
+                            <td>Video Connection Cost</td>
+                            <td>{{result['country_code'] || result['countryCode'] || (result['country'] ? result['country']['country_code'] : '-')}}</td>
+                            <td>{{result['daily_usage']}}</td>
+                            <td>{{result['business_days']}}</td>
+                            <td>{{result['monthly_calls']}}</td>
+                            <td>{{result['aht']}}</td>
+                            <td>{{result['call_minutes']}}</td>
+                            <td class="text-right">{{result['cost_video_connection'] ?? 0 | currency}}</td>
+                          </tr>
+                        </ng-container>
+                        <tr class="font-weight-bold">
+                          <td colspan="7">Total Costs</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Messaging and Chat Table Format -->
+                    <table class="table table-bordered" *ngIf="isMessagingChatResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Service</th>
+                          <th class="text-center">Usage</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Chat Usage</td>
+                          <td class="text-center">{{ result['chatUsage'] || 0 | number }} messages</td>
+                          <td class="text-right">{{ (result['cost_chat_usage'] || 0) | currency }}</td>
+                        </tr>
+                        <tr>
+                          <td>SMS Usage</td>
+                          <td class="text-center">{{ result['smsUsage'] || 0 | number }} messages</td>
+                          <td class="text-right">{{ (result['cost_sms_usage'] || 0) | currency }}</td>
+                        </tr>
+                        <tr *ngIf="result['appleMessages']">
+                          <td>Apple Messages</td>
+                          <td class="text-center">{{ result['appleMessagesUsage'] || 0 | number }} messages</td>
+                          <td class="text-right">{{ (result['cost_apple_messages'] || 0) | currency }}</td>
+                        </tr>
+                        <tr *ngIf="result['whatsappMessaging']">
+                          <td>WhatsApp Messaging</td>
+                          <td class="text-center">{{ result['whatsappUsage'] || 0 | number }} messages</td>
+                          <td class="text-right">{{ (result['cost_whatsapp_messaging'] || 0) | currency }}</td>
+                        </tr>
+                        <tr>
+                          <td>Chat Experiences</td>
+                          <td class="text-center">{{ result['chatExperiences'] || 0 | number }} experiences</td>
+                          <td class="text-right">{{ (result['cost_chat_experiences'] || 0) | currency }}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td colspan="2">Total</td>
+                          <td class="text-right">{{ result.total_cost | currency }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Email Table Format -->
+                    <table class="table table-bordered" *ngIf="isEmailResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Email Service</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Email Usage</td>
+                          <td class="text-right">{{result.cost_email_usage | currency}}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td>Total</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Amazon Q Table Format -->
+                    <table class="table table-bordered" *ngIf="isAmazonQResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Amazon Q Agent</th>
+                          <th>Usage</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngIf="result['channelType'] === 'chat' || (result['cost_azq_chat_usage'] ?? 0) > 0">
+                          <td>Chat Usage</td>
+                          <td>{{ result['chatMessages'] || 0 | number }} messages</td>
+                          <td class="text-right">{{ (result['cost_azq_chat_usage'] || 0) | currency:'USD':'symbol':'1.2-2' }}</td>
+                        </tr>
+                        <tr *ngIf="result['channelType'] === 'voice' || (result['cost_azq_voice_usage'] ?? 0) > 0">
+                          <td>Voice Usage</td>
+                          <td>{{ result['callDuration'] || 0 | number }} minutes</td>
+                          <td class="text-right">{{ (result['cost_azq_voice_usage'] || 0) | currency:'USD':'symbol':'1.2-2' }}</td>
+                        </tr>
+                        <tr class="table-total">
+                          <td colspan="2" class="text-left"><strong>Total</strong></td>
+                          <td class="text-right"><strong>{{ result.total_cost | currency:'USD':'symbol':'1.2-2' }}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Task Table Format -->
+                    <table class="table table-bordered" *ngIf="isTaskResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Task Service</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Task Usage</td>
+                          <td class="text-right">{{result.cost_task_usage | currency}}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td>Total</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Case Table Format -->
+                    <table class="table table-bordered" *ngIf="isCaseResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Case Service</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Case Usage</td>
+                          <td class="text-right">{{result.cost_case_usage | currency}}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td>Total</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Customer Profile Table Format -->
+                    <table class="table table-bordered" *ngIf="isCustomerProfileResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Customer Profile Service</th>
+                          <th class="text-center">Usage</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Daily Amazon Q Requests</td>
+                          <td class="text-center">{{ result.cp_daily_azq | number }}</td>
+                          <td class="text-right">{{ result.cost_cp_daily_azq | currency }}</td>
+                        </tr>
+                        <tr>
+                          <td>Daily External Requests</td>
+                          <td class="text-center">{{ result.cp_daily_ext | number }}</td>
+                          <td class="text-right">{{ result.cost_cp_daily_ext | currency }}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td colspan="2">Total</td>
+                          <td class="text-right">{{ result.total_cost | currency }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Guides Table Format -->
+                    <table class="table table-bordered" *ngIf="isGuidesResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Guides Service</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Messages Sent</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td>Total</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Voice ID Table Format -->
+                    <table class="table table-bordered" *ngIf="isVoiceIdResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Service</th>
+                          <th>Voice ID Authentications</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{{ result.serviceName || 'Voice ID' }}</td>
+                          <td>{{ result.voiceid_usage | number }}</td>
+                          <td class="text-right">{{ result.cost_voiceid_usage | currency:'USD':'symbol':'1.2-2' }}</td>
+                        </tr>
+                        <tr class="table-total">
+                          <td colspan="2" class="text-left"><strong>Total</strong></td>
+                          <td class="text-right"><strong>{{ result.total_cost | currency:'USD':'symbol':'1.2-2' }}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Agent Assist Table Format -->
+                    <table class="table table-bordered" *ngIf="isAgentAssistResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Service</th>
+                          <th>Agent Assist Usage</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{{ result.serviceName || 'Agent Assist' }}</td>
+                          <td>{{ result['agent_usage'] | number }}</td>
+                          <td class="text-right">{{ result['cost_agent_usage'] | currency:'USD':'symbol':'1.2-2' }}</td>
+                        </tr>
+                        <tr class="table-total">
+                          <td colspan="2" class="text-right"><strong>Total</strong></td>
+                          <td class="text-right"><strong>{{ result.total_cost | currency:'USD':'symbol':'1.2-2' }}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Connect Services Table Format -->
+                    <table class="table table-bordered" *ngIf="isConnectServicesResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Connect Services</th>
+                          <th class="text-right">Usage</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Invoice</td>
+                          <td class="text-right">{{result.invoice_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_invoice_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Outbound</td>
+                          <td class="text-right">{{result.outbound_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_outbound_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Chat</td>
+                          <td class="text-right">{{result.chat_usage_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_chat_usage_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Email</td>
+                          <td class="text-right">{{result.email_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_email_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Tasks</td>
+                          <td class="text-right">{{result.task_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_task_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>SMS</td>
+                          <td class="text-right">{{result.sms_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_sms_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Apple Messages</td>
+                          <td class="text-right">{{result.apple_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_apple_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>WhatsApp</td>
+                          <td class="text-right">{{result.whatsapp_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_whatsapp_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Guide</td>
+                          <td class="text-right">{{result.guide_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_guide_acs | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Outbound Campaign</td>
+                          <td class="text-right">{{result.outcamp_acs || 0}}</td>
+                          <td class="text-right">{{result.cost_outcamp_acs | currency}}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td colspan="2">Total</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Connect Lens Table Format -->
+                    <table class="table table-bordered" *ngIf="isConnectLensResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Connect Lens</th>
+                          <th class="text-center">Usage</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Voice Calls</td>
+                          <td class="text-center">{{result['cl_voice_calls'] || 0}}</td>
+                          <td class="text-right">{{(result['cost_cl_voice_calls'] || 0) | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Chat Messages</td>
+                          <td class="text-center">{{result['cl_chat_message'] || 0}}</td>
+                          <td class="text-right">{{(result['cost_cl_chat_message'] || 0) | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Performance Evaluations</td>
+                          <td class="text-center">{{result['cl_performance_eval'] || 0}}</td>
+                          <td class="text-right">{{(result['cost_cl_performance_eval'] || 0) | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>Screen Recording</td>
+                          <td class="text-center">{{result['cl_screen_rec'] || 0}}</td>
+                          <td class="text-right">{{(result['cost_cl_screen_rec'] || 0) | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>External Voice</td>
+                          <td class="text-center">{{result['cl_external_voice'] || 0}}</td>
+                          <td class="text-right">{{(result['cost_cl_external_voice'] || 0) | currency}}</td>
+                        </tr>
+                        <tr>
+                          <td>External Connector</td>
+                          <td class="text-center">{{result['cl_external_connector'] || 0}}</td>
+                          <td class="text-right">{{(result['cost_cl_external_connector'] || 0) | currency}}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td colspan="2">Total</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Forecasting and Scheduling Table Format -->
+                    <table class="table table-bordered" *ngIf="isForecastingSchedulingResult(i)">
+                      <thead>
+                        <tr>
+                          <th>Forecasting and Scheduling</th>
+                          <th class="text-center">Usage</th>
+                          <th class="text-right">Cost (USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Forecasted Agents</td>
+                          <td class="text-center">{{result['agent_forecasted'] || 0}} agents</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                        <tr class="font-weight-bold">
+                          <td colspan="2">Total</td>
+                          <td class="text-right">{{result.total_cost | currency}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+              
+              <div class="calculation-actions">
+                <button mat-button color="warn" (click)="deleteCalculationFromCollection(i)">
+                  <mat-icon>delete</mat-icon> Remove from Collection
+                </button>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

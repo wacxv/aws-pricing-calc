@@ -1,0 +1,2 @@
+service_id,cl_voice_calls_base,cl_voice_calls_additional_rate,cl_chat_message_usage,cl_performance_evaluation,cl_screen_recording,cl_external_voice_base,cl_external_voice_additional_rate,cl_external_voice_connector
+13,0.015, 0.0125, 0.0015, 12, 0.006, 0, 0.0012, 40000
